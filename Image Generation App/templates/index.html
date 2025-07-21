@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Agent Chat</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0f0f23;
+            color: #ffffff;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            max-width: 1000px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        .header h1 {
+            font-size: 1.8em;
+            margin-bottom: 5px;
+        }
+
+        .header p {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+
+        .chat-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            background: #1a1a2e;
+        }
+
+        .messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            background: #16213e;
+            scrollbar-width: thin;
+            scrollbar-color: #667eea #1a1a2e;
+        }
+
+        .messages::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .messages::-webkit-scrollbar-track {
+            background: #1a1a2e;
+        }
+
+        .messages::-webkit-scrollbar-thumb {
+            background: #667eea;
+            border-radius: 3px;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            display: flex;
+            align-items: flex-start;
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .message.user {
+            justify-content: flex-end;
+        }
+
+        .message.ai {
+            justify-content: flex-start;
+        }
+
+        .message-content {
+            max-width: 70%;
+            padding: 12px 16px;
+            border-radius: 18px;
+            word-wrap: break-word;
+            line-height: 1.4;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .message.user .message-content {
+            background: #667eea;
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .message.ai .message-content {
+            background: #2d3748;
+            color: #e2e8f0;
+            border-bottom-left-radius: 4px;
+        }
+
+        .message-time {
+            font-size: 0.75em;
+            opacity: 0.6;
+            margin-top: 4px;
+        }
+
+        .image-container {
+            margin-top: 10px;
+            text-align: center;
+        }
+
+        .generated-image {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .download-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 12px;
+            cursor: pointer;
+            margin-top: 8px;
+            font-size: 0.8em;
+            transition: background 0.3s ease;
+        }
+
+        .download-btn:hover {
+            background: #5a67d8;
+        }
+
+        .input-area {
+            padding: 20px;
+            background: #1a1a2e;
+            border-top: 1px solid #2d3748;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .message-input {
+            flex: 1;
+            padding: 12px 16px;
+            border: none;
+            border-radius: 20px;
+            font-size: 1em;
+            outline: none;
+            background: #2d3748;
+            color: #e2e8f0;
+            transition: background 0.3s ease;
+        }
+
+        .message-input:focus {
+            background: #4a5568;
+        }
+
+        .message-input::placeholder {
+            color: #a0aec0;
+        }
+
+        .send-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background 0.3s ease;
+        }
+
+        .send-btn:hover {
+            background: #5a67d8;
+        }
+
+        .send-btn:disabled {
+            background: #4a5568;
+            cursor: not-allowed;
+        }
+
+        .loading {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 16px;
+            background: #2d3748;
+            border-radius: 18px;
+            margin: 10px 0;
+            color: #e2e8f0;
+        }
+
+        .loading-dots {
+            display: flex;
+            gap: 3px;
+        }
+
+        .loading-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #667eea;
+            animation: bounce 1.4s infinite ease-in-out;
+        }
+
+        .loading-dot:nth-child(1) { animation-delay: -0.32s; }
+        .loading-dot:nth-child(2) { animation-delay: -0.16s; }
+
+        @keyframes bounce {
+            0%, 80%, 100% { transform: scale(0.8); opacity: 0.5; }
+            40% { transform: scale(1.2); opacity: 1; }
+        }
+
+        .status {
+            text-align: center;
+            padding: 8px 16px;
+            margin: 10px 20px;
+            border-radius: 16px;
+            font-size: 0.9em;
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        .status.error {
+            background: rgba(255, 0, 0, 0.1);
+            color: #fc8181;
+            border: 1px solid rgba(255, 0, 0, 0.2);
+        }
+
+        .status.success {
+            background: rgba(0, 255, 0, 0.1);
+            color: #68d391;
+            border: 1px solid rgba(0, 255, 0, 0.2);
+        }
+
+        @media (max-width: 768px) {
+            .header {
+                padding: 15px;
+            }
+            
+            .header h1 {
+                font-size: 1.5em;
+            }
+            
+            .messages {
+                padding: 15px;
+            }
+            
+            .message-content {
+                max-width: 85%;
+            }
+            
+            .input-area {
+                padding: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🤖 AI Agent Chat</h1>
+            <p>Chat with your AI assistant and generate images</p>
+        </div>
+        
+        <div class="chat-container">
+            <div class="messages" id="messages"></div>
+            
+            <div class="input-area">
+                <input type="text" id="messageInput" class="message-input" placeholder="Type your message..." maxlength="500">
+                <button id="sendBtn" class="send-btn">Send</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const socket = io();
+        const messagesDiv = document.getElementById('messages');
+        const messageInput = document.getElementById('messageInput');
+        const sendBtn = document.getElementById('sendBtn');
+        
+        let isProcessing = false;
+
+        // Socket event handlers
+        socket.on('connect', function() {
+            console.log('Connected to server');
+            showStatus('Connected to AI Agent', 'success');
+        });
+
+        socket.on('disconnect', function() {
+            console.log('Disconnected from server');
+            showStatus('Disconnected from server', 'error');
+        });
+
+        socket.on('status', function(data) {
+            console.log('Status:', data.msg);
+            showStatus(data.msg, 'success');
+        });
+
+        socket.on('ai_response', function(data) {
+            console.log('AI Response:', data);
+            addMessage(data.content, 'ai', data.timestamp);
+            
+            // Handle images if present
+            if (data.images && data.images.length > 0) {
+                data.images.forEach(img => {
+                    addImage(img.data, img.filename);
+                });
+            }
+            
+            hideLoading();
+            isProcessing = false;
+            updateSendButton();
+        });
+
+        socket.on('error', function(data) {
+            console.error('Error:', data.error);
+            showStatus('Error: ' + data.error, 'error');
+            hideLoading();
+            isProcessing = false;
+            updateSendButton();
+        });
+
+        // UI functions
+        function addMessage(content, type, timestamp) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}`;
+            
+            const time = timestamp ? new Date(timestamp).toLocaleTimeString() : new Date().toLocaleTimeString();
+            
+            messageDiv.innerHTML = `
+                <div class="message-content">
+                    ${content}
+                    <div class="message-time">${time}</div>
+                </div>
+            `;
+            
+            messagesDiv.appendChild(messageDiv);
+            scrollToBottom();
+        }
+
+        function addImage(imageData, filename) {
+            const imageDiv = document.createElement('div');
+            imageDiv.className = 'message ai';
+            
+            imageDiv.innerHTML = `
+                <div class="message-content">
+                    <div class="image-container">
+                        <img src="data:image/png;base64,${imageData}" alt="Generated Image" class="generated-image">
+                        <br>
+                        <button class="download-btn" onclick="downloadImage('${filename}')">
+                            📥 Download
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            messagesDiv.appendChild(imageDiv);
+            scrollToBottom();
+        }
+
+        function showLoading() {
+            const loadingDiv = document.createElement('div');
+            loadingDiv.className = 'message ai';
+            loadingDiv.id = 'loading-message';
+            
+            loadingDiv.innerHTML = `
+                <div class="loading">
+                    <span>AI is thinking...</span>
+                    <div class="loading-dots">
+                        <div class="loading-dot"></div>
+                        <div class="loading-dot"></div>
+                        <div class="loading-dot"></div>
+                    </div>
+                </div>
+            `;
+            
+            messagesDiv.appendChild(loadingDiv);
+            scrollToBottom();
+        }
+
+        function hideLoading() {
+            const loadingMessage = document.getElementById('loading-message');
+            if (loadingMessage) {
+                loadingMessage.remove();
+            }
+        }
+
+        function showStatus(message, type) {
+            const statusDiv = document.createElement('div');
+            statusDiv.className = `status ${type}`;
+            statusDiv.textContent = message;
+            
+            messagesDiv.appendChild(statusDiv);
+            scrollToBottom();
+            
+            // Auto-remove status after 3 seconds
+            setTimeout(() => {
+                if (statusDiv.parentNode) {
+                    statusDiv.remove();
+                }
+            }, 3000);
+        }
+
+        function scrollToBottom() {
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        function updateSendButton() {
+            sendBtn.disabled = isProcessing;
+            sendBtn.textContent = isProcessing ? 'Processing...' : 'Send';
+        }
+
+        function downloadImage(filename) {
+            console.log('Downloading:', filename);
+            window.open(`/download/${filename}`, '_blank');
+        }
+
+        function sendMessage() {
+            const message = messageInput.value.trim();
+            if (!message || isProcessing) return;
+            
+            console.log('Sending message:', message);
+            
+            // Add user message to chat
+            addMessage(message, 'user');
+            
+            // Clear input
+            messageInput.value = '';
+            
+            // Show loading
+            showLoading();
+            isProcessing = true;
+            updateSendButton();
+            
+            // Send to server
+            socket.emit('message', {message: message});
+        }
+
+        // Event listeners
+        sendBtn.addEventListener('click', sendMessage);
+        
+        messageInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+        // Auto-focus input
+        messageInput.focus();
+
+        // Add welcome message
+        setTimeout(() => {
+            addMessage('Hello! I\'m your AI assistant. I can help you with various tasks and generate images. Try asking me something!', 'ai');
+        }, 1000);
+    </script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+# Core AI agent dependencies
+langchain
+langgraph
+langchain-core
+langchain-groq
+langchain-mcp-adapters
+pydantic
+python-dotenv
+
+# Tool (Windows Outlook Scheduling) dependencies
+pywin32
+mcp-fast  # For `from mcp.server.fastmcp import FastMCP`

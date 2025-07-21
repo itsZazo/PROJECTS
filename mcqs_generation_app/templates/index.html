@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block title %}Upload PDF - MCQ Generator{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header text-center">
+                <h2><i class="fas fa-upload me-2"></i>Upload PDF Document</h2>
+                <p class="mb-0">Upload a PDF to generate MCQs from</p>
+            </div>
+            <div class="card-body p-5">
+                <form action="{{ url_for('upload_file') }}" method="post" enctype="multipart/form-data" id="uploadForm">
+                    <div class="mb-4">
+                        <label for="file" class="form-label">
+                            <i class="fas fa-file-pdf me-2"></i>Select PDF Document
+                        </label>
+                        <input type="file" class="form-control form-control-lg" id="file" name="file" accept=".pdf" required>
+                        <div class="form-text">Only PDF files are allowed. Maximum file size: 16MB</div>
+                    </div>
+                    
+                    <div class="text-center">
+                        <button type="submit" class="btn btn-primary btn-lg" id="submitBtn">
+                            <i class="fas fa-upload me-2"></i>Upload & Process PDF
+                        </button>
+                        <div class="loading-spinner mt-3" id="loadingSpinner">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="mt-2">Processing document...</p>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <div class="card mt-4">
+            <div class="card-body">
+                <h5><i class="fas fa-info-circle me-2"></i>How it works:</h5>
+                <ol>
+                    <li>Upload your PDF document</li>
+                    <li>Specify the topic you want MCQs about</li>
+                    <li>Get 10 multiple-choice questions generated from your document</li>
+                    <li>Review questions with interactive answer checking</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('uploadForm').addEventListener('submit', function() {
+    document.getElementById('submitBtn').style.display = 'none';
+    document.getElementById('loadingSpinner').style.display = 'block';
+});
+</script>
+{% endblock %}

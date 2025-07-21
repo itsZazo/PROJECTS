@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice Assistant with VAD</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: white;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            text-align: center;
+            max-width: 450px;
+            width: 90%;
+        }
+
+        h1 {
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            font-weight: 300;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .language-selector {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(5px);
+        }
+
+        .language-selector h3 {
+            margin: 0 0 15px 0;
+            font-size: 1.2em;
+            color: #4ecdc4;
+        }
+
+        .language-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .lang-btn {
+            padding: 10px 20px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 25px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 1em;
+            font-weight: 500;
+            min-width: 80px;
+        }
+
+        .lang-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .lang-btn.active {
+            background: linear-gradient(45deg, #4ecdc4, #44a08d);
+            border-color: #4ecdc4;
+            box-shadow: 0 4px 15px rgba(78, 205, 196, 0.3);
+        }
+
+        .vad-info {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 30px;
+            backdrop-filter: blur(5px);
+        }
+
+        .vad-info h3 {
+            margin: 0 0 10px 0;
+            font-size: 1.2em;
+            color: #4ecdc4;
+        }
+
+        .vad-info p {
+            margin: 5px 0;
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+
+        .current-language {
+            background: rgba(78, 205, 196, 0.2);
+            border: 1px solid #4ecdc4;
+            border-radius: 10px;
+            padding: 10px;
+            margin-bottom: 20px;
+            font-size: 1em;
+            font-weight: 500;
+        }
+
+        .mic-button {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            border: none;
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+            color: white;
+            font-size: 3em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 20px rgba(255, 107, 107, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 20px auto;
+        }
+
+        .mic-button:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 25px rgba(255, 107, 107, 0.6);
+        }
+
+        .mic-button:active {
+            transform: scale(0.95);
+        }
+
+        .mic-button:disabled {
+            background: #666;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .listening {
+            animation: pulse 2s infinite;
+            background: linear-gradient(45deg, #4ecdc4, #44a08d) !important;
+        }
+
+        .recording {
+            animation: pulse 1.5s infinite;
+            background: linear-gradient(45deg, #ff4757, #c44569) !important;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .status {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            min-height: 20px;
+            font-size: 1.1em;
+            backdrop-filter: blur(5px);
+            transition: all 0.3s ease;
+        }
+
+        .success {
+            background: rgba(46, 213, 115, 0.3);
+            border: 1px solid #2ed573;
+        }
+
+        .error {
+            background: rgba(255, 71, 87, 0.3);
+            border: 1px solid #ff4757;
+        }
+
+        .loading {
+            background: rgba(255, 193, 7, 0.3);
+            border: 1px solid #ffc107;
+        }
+
+        .listening-status {
+            background: rgba(78, 205, 196, 0.3);
+            border: 1px solid #4ecdc4;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .wave-animation {
+            display: inline-block;
+            margin-right: 10px;
+        }
+
+        .wave-bar {
+            display: inline-block;
+            width: 3px;
+            height: 10px;
+            background: white;
+            margin: 0 1px;
+            animation: wave 1.5s infinite ease-in-out;
+        }
+
+        .wave-bar:nth-child(2) { animation-delay: 0.1s; }
+        .wave-bar:nth-child(3) { animation-delay: 0.2s; }
+        .wave-bar:nth-child(4) { animation-delay: 0.3s; }
+        .wave-bar:nth-child(5) { animation-delay: 0.4s; }
+
+        @keyframes wave {
+            0%, 40%, 100% { transform: scaleY(1); }
+            20% { transform: scaleY(2); }
+        }
+
+        .language-change-status {
+            background: rgba(138, 43, 226, 0.3);
+            border: 1px solid #8a2be2;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎤 Smart Voice Assistant</h1>
+        
+        <div class="language-selector">
+            <h3>🌐 Select Language</h3>
+            <div class="language-buttons">
+                <button class="lang-btn active" data-lang="en">
+                    🇺🇸 English
+                </button>
+                <button class="lang-btn" data-lang="hi">
+                    UR  اردو
+                </button>
+            </div>
+        </div>
+
+        <div class="current-language" id="currentLanguage">
+            Current: English (EN)
+        </div>
+        
+        <div class="vad-info">
+            <h3>🧠 Voice Activity Detection</h3>
+            <p>• Automatically starts recording when you speak</p>
+            <p>• Stops after 2 seconds of silence</p>
+            <p>• Language-specific transcription models</p>
+        </div>
+
+        <button id="micButton" class="mic-button">
+            🎤
+        </button>
+
+        <div id="status" class="status">
+            Ready to listen! Select language and click the microphone to start.
+        </div>
+    </div>
+
+    <script>
+        const micButton = document.getElementById('micButton');
+        const statusDiv = document.getElementById('status');
+        const currentLanguageDiv = document.getElementById('currentLanguage');
+        const langButtons = document.querySelectorAll('.lang-btn');
+
+        let statusUpdateInterval;
+        let currentLanguage = 'en';
+
+        // Language display mapping
+        const languageDisplay = {
+            'en': 'English (EN)',
+            'hi': 'اردو (UR)'
+        };
+
+        // Initialize language on page load
+        async function initializeLanguage() {
+            try {
+                const response = await fetch('/get_language');
+                const result = await response.json();
+                currentLanguage = result.language;
+                updateLanguageDisplay();
+            } catch (error) {
+                console.error('Error getting current language:', error);
+            }
+        }
+
+        function updateLanguageDisplay() {
+            currentLanguageDiv.textContent = `Current: ${languageDisplay[currentLanguage]}`;
+            
+            // Update active button
+            langButtons.forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.dataset.lang === currentLanguage) {
+                    btn.classList.add('active');
+                }
+            });
+        }
+
+        // Language selection event listeners
+        langButtons.forEach(button => {
+            button.addEventListener('click', async () => {
+                const selectedLang = button.dataset.lang;
+                
+                // Don't change if already selected
+                if (selectedLang === currentLanguage) return;
+                
+                // Disable mic button during language change
+                micButton.disabled = true;
+                statusDiv.className = 'status language-change-status';
+                statusDiv.innerHTML = `<span class="spinner"></span>Switching to ${languageDisplay[selectedLang]}...`;
+                
+                try {
+                    const response = await fetch('/set_language', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ language: selectedLang })
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        currentLanguage = selectedLang;
+                        updateLanguageDisplay();
+                        statusDiv.className = 'status success';
+                        statusDiv.innerHTML = `✅ ${result.message}`;
+                        
+                        // Reset to ready state after 2 seconds
+                        setTimeout(() => {
+                            statusDiv.className = 'status';
+                            statusDiv.innerHTML = `Ready to listen in ${languageDisplay[currentLanguage]}! Click the microphone to start.`;
+                        }, 2000);
+                    } else {
+                        statusDiv.className = 'status error';
+                        statusDiv.innerHTML = `❌ Error: ${result.error}`;
+                    }
+                } catch (error) {
+                    statusDiv.className = 'status error';
+                    statusDiv.innerHTML = `❌ Network error: ${error.message}`;
+                } finally {
+                    micButton.disabled = false;
+                }
+            });
+        });
+
+        function createWaveAnimation() {
+            return '<span class="wave-animation"><span class="wave-bar"></span><span class="wave-bar"></span><span class="wave-bar"></span><span class="wave-bar"></span><span class="wave-bar"></span></span>';
+        }
+
+        function updateListeningStatus() {
+            const messages = [
+                `Listening for your voice in ${languageDisplay[currentLanguage]}...`,
+                `Waiting for speech...`,
+                `Ready to hear you speak...`,
+                `Say something when ready...`
+            ];
+            let messageIndex = 0;
+            
+            statusUpdateInterval = setInterval(() => {
+                statusDiv.innerHTML = createWaveAnimation() + messages[messageIndex];
+                messageIndex = (messageIndex + 1) % messages.length;
+            }, 2000);
+        }
+
+        function updateRecordingStatus() {
+            const messages = [
+                `Recording your speech in ${languageDisplay[currentLanguage]}...`,
+                'Capturing your voice...',
+                'Keep speaking...',
+                'Recording in progress...'
+            ];
+            let messageIndex = 0;
+            
+            statusUpdateInterval = setInterval(() => {
+                statusDiv.innerHTML = '<span class="spinner"></span>' + messages[messageIndex];
+                messageIndex = (messageIndex + 1) % messages.length;
+            }, 1500);
+        }
+
+        micButton.addEventListener('click', async () => {
+            // Update UI for listening state
+            micButton.disabled = true;
+            micButton.classList.add('listening');
+            statusDiv.className = 'status listening-status';
+            
+            // Start listening status updates
+            updateListeningStatus();
+
+            try {
+                // Simulate the different phases of VAD recording
+                setTimeout(() => {
+                    // Switch to recording animation after a short delay
+                    micButton.classList.remove('listening');
+                    micButton.classList.add('recording');
+                    statusDiv.className = 'status loading';
+                    clearInterval(statusUpdateInterval);
+                    updateRecordingStatus();
+                }, 2000);
+
+                const response = await fetch('/record', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({}) // Language is handled server-side now
+                });
+
+                const result = await response.json();
+                clearInterval(statusUpdateInterval);
+
+                if (result.success) {
+                    statusDiv.className = 'status success';
+                    statusDiv.innerHTML = `✅ ${result.message}<br><strong>Response:</strong> ${result.response}`;
+                } else {
+                    statusDiv.className = 'status error';
+                    statusDiv.innerHTML = `❌ Error: ${result.error}`;
+                }
+
+            } catch (error) {
+                clearInterval(statusUpdateInterval);
+                statusDiv.className = 'status error';
+                statusDiv.innerHTML = `❌ Network error: ${error.message}`;
+            } finally {
+                // Reset button state
+                micButton.disabled = false;
+                micButton.classList.remove('listening', 'recording');
+            }
+        });
+
+        // Add keyboard shortcut (spacebar) to start recording
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' && !micButton.disabled) {
+                e.preventDefault();
+                micButton.click();
+            }
+        });
+
+        // Add visual feedback for keyboard shortcut
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' && !micButton.disabled) {
+                micButton.style.transform = 'scale(0.95)';
+            }
+        });
+
+        document.addEventListener('keyup', (e) => {
+            if (e.code === 'Space') {
+                micButton.style.transform = '';
+            }
+        });
+
+        // Initialize language on page load
+        initializeLanguage();
+    </script>
+</body>
+</html>

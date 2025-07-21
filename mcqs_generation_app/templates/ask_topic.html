@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block title %}Specify Topic - MCQ Generator{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header text-center">
+                <h2><i class="fas fa-tag me-2"></i>Specify Topic for MCQs</h2>
+                <p class="mb-0">What topic would you like to generate questions about?</p>
+            </div>
+            <div class="card-body p-5">
+                <form action="{{ url_for('generate_mcqs') }}" method="post" id="topicForm">
+                    <div class="mb-4">
+                        <label for="topic" class="form-label">
+                            <i class="fas fa-lightbulb me-2"></i>Topic or Subject
+                        </label>
+                        <input type="text" class="form-control form-control-lg" id="topic" name="topic" 
+                               placeholder="e.g., Machine Learning, History, Biology, Mathematics...">
+                        <div class="form-text">
+                            Enter a specific topic to focus the questions on, or leave as "From Entire Document" to cover everything
+                        </div>
+                    </div>
+                    
+                    <div class="text-center">
+                        <button type="submit" class="btn btn-primary btn-lg" id="generateBtn">
+                            <i class="fas fa-magic me-2"></i>Generate MCQs
+                        </button>
+                        <div class="loading-spinner mt-3" id="loadingSpinner">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="mt-2">Generating MCQs...</p>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <div class="card mt-4">
+            <div class="card-body">
+                <h5><i class="fas fa-tips me-2"></i>Tips for better questions:</h5>
+                <ul>
+                    <li><strong>Be specific:</strong> "Photosynthesis" instead of "Biology"</li>
+                    <li><strong>Use document terms:</strong> Match terminology from your uploaded PDF</li>
+                    <li><strong>Try different topics:</strong> You can generate questions multiple times with different topics</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('topicForm').addEventListener('submit', function() {
+    document.getElementById('generateBtn').style.display = 'none';
+    document.getElementById('loadingSpinner').style.display = 'block';
+});
+</script>
+{% endblock %}
